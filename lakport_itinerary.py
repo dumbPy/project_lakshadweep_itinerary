@@ -23,6 +23,8 @@ import pandas as pd
 from datetime import datetime
 import networkx as nx
 import numpy as np
+import dumbpy_networkx_helper as dnh
+import matplotlib.pyplot as plt
 
 """
 Variables Defined Below
@@ -30,11 +32,11 @@ Variables Defined Below
 maxDaysOnOneIsland = 3
 tourDuration = 15
 
-Departure = datetime.strptime('13/03/2018', '%d/%m/%Y')
+Departure = datetime.strptime('11/03/2018', '%d/%m/%Y')
 Start = 'Kochi'
 End = 'Kochi'
 minHoursOnOneIsland = 3
-maxHoursPerShip = 24
+maxHoursPerShip = 30
 
 
 
@@ -71,20 +73,10 @@ for i,date in enumerate(df.index):
 
 finalSchedule = pd.DataFrame(finalSchedule, columns = ['Date']+list(df.columns))
 
-
 #print([type(finalSchedule.loc[date, ship]) for date in finalSchedule.index for ship in finalSchedule.columns])
 
 
-
-
-
 G = nx.MultiDiGraph()
-nodes = pd.unique(np.ravel(finalSchedule.iloc[:, 1:].values.tolist())).tolist()
-nodes.remove(str(filler))
-#print(nodes)
-G.add_nodes_from(nodes)
-print(G.nodes)
-
 
 temp_time = 0
 temp_ship = 0
@@ -97,7 +89,7 @@ def setEdges():
         cond1 = list(finalSchedule.Date > edgeStartDate)
         cond2 = list((finalSchedule.Date-edgeStartDate).astype('timedelta64[D]') < maxDaysOnOneIsland)
         cond3 = list((finalSchedule.Date-edgeStartDate).astype('timedelta64[D]') >= 0)
-        finalCond = [(a and b and c) for (a, b, c) in zip(cond.get1, cond2, cond3)]
+        finalCond = [(a and b and c) for (a, b, c) in zip(cond1, cond2, cond3)]
         shortSchedule = finalSchedule[finalCond]
         #print(cond1, cond2, cond3, finalCond)
         #print(shortSchedule.shape)
@@ -124,10 +116,12 @@ def setEdges():
                                 edgeShip = edgeStartShip
                             else:#Edge representing stay
                                 edgeShip = 'None'
-                            G.add_edge(edgeStart, edgeEnd, timing = [edgeStartDate, edgeEndDate], ship = edgeShip)
-                            print(edgeStart,' - ', edgeEnd, '                  timing- ', [edgeStartDate, edgeEndDate],' ship= ', edgeShip)
+                            edgeStartNode = dnh.add_node_if_required(G, dnh.locationNode(edgeStart, edgeStartDate))
+                            edgeEndNode = dnh.add_node_if_required(G, dnh.locationNode(edgeEnd, edgeEndDate))
+                            G.add_edge(edgeStartNode, edgeEndNode, ship = edgeShip)
+                            #print(edgeStart,' - ', edgeEnd, '                  timing- ', [edgeStartDate, edgeEndDate],' ship= ', edgeShip)
 
 setEdges()
-
+routes = dnh.find_n_routes(G=G, source='Kochi', max_n_routes= 5)
 
 
