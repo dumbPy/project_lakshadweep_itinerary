@@ -6,18 +6,19 @@ Created on Wed Mar 14 00:32:17 2018
 git    : https://github.com/dumbPy
 """
 """
-This script is used to parse feasible itinerary for Lakshdweep
-As the Ship Schedule page is captcha and text-selection protected, the schedule should be copied manually as follows.
-
-VISIT http://lakport.nic.in/ship_online_programme.aspx
-SELECT 'All Passenger ships'. #here page will refresh is a fraction of sec.
-Enter the captcha but don't submit/click view yet.
-Right_click>Inspect>Network_Tab
-Now submit/click VIEW. #Some files will appear in Network Tab.
-Click 'ship_online_programme.aspx' and in that click Response sub-Tab.
-Copy the response into a txt file and import it below.
-
-
+# =============================================================================
+# This script is used to parse feasible itinerary for Lakshdweep
+# As the Ship Schedule page is captcha and text-selection protected,
+# the schedule should be copied manually as follows.
+# 
+# VISIT http://lakport.nic.in/ship_online_programme.aspx
+# SELECT 'All Passenger ships'. #here page will refresh is a fraction of sec.
+# Enter the captcha but don't submit/click view yet.
+# Right_click>Inspect>Network_Tab
+# Now submit/click VIEW. #Some files will appear in Network Tab.
+# Click 'ship_online_programme.aspx' and in that click Response sub-Tab.
+# Copy the response into a txt file and import it below.
+# =============================================================================
 """
 import pandas as pd
 from datetime import datetime
@@ -26,28 +27,25 @@ import numpy as np
 import dumbpy_networkx_helper as dnh
 import matplotlib.pyplot as plt
 
-"""
-Variables Defined Below
-"""
+
+# =============================================================================
+# Variables Defined Below
+# =============================================================================
+
 maxDaysOnOneIsland = 3
-tourDuration = 15
+tourDuration = 15   #Not used in the code yet. for v2.0
 
 Departure = datetime.strptime('11/03/2018', '%d/%m/%Y')
 Start = 'Kochi'
 End = 'Kochi'
 minHoursOnOneIsland = 3
 maxHoursPerShip = 30
-
-
-
+max_n_routes = 20
 
 
 
 #Used to neglect inland stay as a part of itinerary
 inlandPorts = ['Kochi', 'Mangalore']
-
-
-
 
 #url = os.path.expanduser("~/dropbox/projects/schedule_14_03_2018.html")  #use only if file is in some other directory
 url = 'schedule_14_03_2018.html'
@@ -115,13 +113,22 @@ def setEdges():
                             if edgeEnd != edgeStart: #edge representing travel
                                 edgeShip = edgeStartShip
                             else:#Edge representing stay
-                                edgeShip = 'None'
+                                edgeShip = None
                             edgeStartNode = dnh.add_node_if_required(G, dnh.locationNode(edgeStart, edgeStartDate))
                             edgeEndNode = dnh.add_node_if_required(G, dnh.locationNode(edgeEnd, edgeEndDate))
                             G.add_edge(edgeStartNode, edgeEndNode, ship = edgeShip)
                             #print(edgeStart,' - ', edgeEnd, '                  timing- ', [edgeStartDate, edgeEndDate],' ship= ', edgeShip)
 
 setEdges()
-routes = dnh.find_n_routes(G=G, source='Kochi', max_n_routes= 5)
+routes = dnh.find_n_routes(G=G, source='Kochi', max_n_routes= max_n_routes)
 
-
+def print_routes():
+    
+    for route in routes:
+        for i, node in enumerate(route[:-1]):
+            print(node.location, node.timestamp)
+            print(G.get_edge_data(route[i], route[i+1])[0])
+        destination = route[-1]
+        print(destination.location, destination.timestamp)
+        print()
+print_routes()

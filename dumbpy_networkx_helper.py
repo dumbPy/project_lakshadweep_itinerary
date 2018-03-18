@@ -36,9 +36,15 @@ find_n_routes(Graph, source, destination) is a finction that finds
 max n routes between source and destination in a given Graph G
 """
 #Tracks the number of routes found uptill now
-n_routes = 0
 
+n_routes = 0
 def find_n_routes(G=None, source=None, destination=None, max_n_routes=1):
+    
+    
+    routes = []
+    
+    
+    
     if not G or not source:
         print("Insufficient Data Provided.. PLease make sure you provide Graph and Source")
         return([])
@@ -50,37 +56,74 @@ def find_n_routes(G=None, source=None, destination=None, max_n_routes=1):
         if n_routes >= max_n_routes:    #To make sure loop ends when we find n routes
             return ([])
         #print(len(path_till_current_node))
-        print(n_routes)
+        #print(n_routes)
         
         #path_till_current_node is a list of all nodes from start till current_node
         current_node= path_till_current_node[-1]        
         neighbors = list(G.neighbors(current_node))
         
         # Condition 1, no neighbors
-        if len(neighbors)==0:
-            return([])
+        if len(neighbors)==0 or n_routes>= max_n_routes:
+            return()
+        
+        def filter_neighbors(neighbors):
+            
+            cleaned_neighbors = neighbors[:]
+            #Cleaning neighbors of all nodes that shouldn't be there.
+            if len(path_till_current_node)>= 2:
+                node1 = path_till_current_node[-2]
+                node2 = path_till_current_node[-1]
+                if node1.location==node2.location:
+                    last_edge_type = 'stay'
+                else:
+                    last_edge_type = 'travel'
+            else:
+                last_edge_type = None
+            for node in neighbors:
+                if node in path_till_current_node:
+                    cleaned_neighbors.remove(node)
+                
+                if node.location==current_node.location and last_edge_type=='stay':
+                    cleaned_neighbors.remove(node)
+
+                if node.location != current_node.location and last_edge_type == 'travel':
+                    cleaned_neighbors.remove(node)
+                    
+# =============================================================================
+#                     print('reaching here')
+#                     print(node1.location, node2.location, node2.timestamp)
+#                     print(node.location, node.timestamp)
+# =============================================================================
+            return(cleaned_neighbors, last_edge_type)
+        
+        neighbors, last_edge_type = filter_neighbors(neighbors)
+        
+        
+# =============================================================================
+#         if len(path_till_current_node)>=2:
+#             print('last edge: ', path_till_current_node[-2].location, last_edge_type, path_till_current_node[-1].location )
+#             print([neighbor.location for neighbor in cleaned_neighbors])
+# =============================================================================
         
         # Condition 2, return chain ending with destination and other chains
-        for node in neighbors:
-            if node in path_till_current_node:
-                neighbors.remove(node)
         for node in neighbors:
             if node.location == destination:
                 destination_node = node
                 neighbors.remove(destination_node)
                 n_routes+=1
-                return([path_till_current_node+[destination_node]]+[find_next_node(path_till_current_node+[neighbor]) for neighbor in neighbors])
+                routes.append(path_till_current_node+[destination_node])
+                [find_next_node(path_till_current_node+[neighbor]) for neighbor in neighbors]
         
         #No neighbor is destination, call recursively on all next nodes
-        return([find_next_node(path_till_current_node+[neighbor]) for neighbor in neighbors])
-    
+        [find_next_node(path_till_current_node+[neighbor]) for neighbor in neighbors]
+
     start_nodes = []
     for node in G.nodes():
         if node.location == source:
             start_nodes.append(node)
-            print(node.location, node.timestamp)
-    return ([find_next_node([start_node]) for start_node in start_nodes])
-        
+            #print(node.location, node.timestamp)
+    [find_next_node([start_node]) for start_node in start_nodes]
+    return(routes)
         
         
         
