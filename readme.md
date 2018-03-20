@@ -11,11 +11,17 @@
 <p>Manual Itinerary Planning based on above schedule is hard and will surely lead to missing a lot of possible travel options that are hard to spot in the above jumbled schedule. A small example can be found below:</p>
 <p><img src="https://lh3.googleusercontent.com/Q2C6RoqyVIqVJ7RT1xCeNcH_rLpOfrBGkMkqrKD7of32HLaqmGbOXc86yWbJYhgDqofIWaJ2Obg=s1440" alt="Manual itinerary"></p>
 <h2 id="steps-before-running-the-code">Steps before running the code</h2>
+<h3 id="extracting-the-above-ship-schedule-manually.">Extracting the above Ship Schedule manually.</h3>
+<p>The <a href="http://lakport.nic.in">Ship Schedule</a> is captcha and text selection protected and hence the need to get the get the latest schedule manually as shown below.</p>
 <ol>
-<li>Extracting the above Ship Schedule manually.<br>
-The <a href="http://lakport.nic.in">Ship Schedule</a> is captcha and text selection protected and hence the need to get the get the latest schedule manually as shown below.<br>
-1.1 Go the <a href="http://lakport.nic.in">Home Page</a> and click <em><strong>Ship Schedule</strong></em></li>
+<li>Go the <a href="http://lakport.nic.in">Home Page</a> and click <em><strong>Ship Schedule</strong></em></li>
+<li>Select <em>All Passenger Ships</em> and Enter Captcha, but do not click <em>View</em> yet.</li>
+<li>Right Click on the page and click <em>Inspect</em> and go to <em>Network Tab</em></li>
+<li>Now click <em>View</em> and you will find some files appearing in <em>Network</em> tab as a response to you clicking <em>View</em></li>
+<li>select the first file <em>ship_online_programme.aspx</em> and open the <em>Response</em> sub Tab just beside it to see the HTML code of the above response.</li>
+<li>Hit <em>ctrl+a</em> to <em>select all</em> the HTML response code and copy it and paste it in a text editor an save it as a &lt;name&gt;.html file. This HTML file contains the page with the required Schedule.</li>
 </ol>
+<p>The Code will extract the required Schedule Table from the above HTML file, but remember to change this HTML file’s name properly in the code.</p>
 <h2 id="methodology">Methodology</h2>
 <p><strong>NetworkX</strong> Library was used for making Graph. The library accepts any class object as node, and hence a class <em>locationNode</em> was defined with inner attributes <em>location</em> and <em>timestamp</em>. Instances of this class <em>locationNode</em> were used to represent Nodes in the graphs and the inner attributes can be accessed as <em>node.location</em> and <em>node.timestamp</em> for any <em>node</em> instance.</p>
 <p>A new <em><strong>add_node(Graph, node)</strong></em> function was defined to add nodes to graph G, rather than using the Graph’s internal function <em>G.add_node</em> as the internal function considers any two exact same instances of the class <em>nodeLocation</em> as different based on their different memory location rather than comparing their internal attributes.</p>
