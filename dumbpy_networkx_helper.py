@@ -18,28 +18,42 @@ class locationNode(object):
 
 
 
-# 1. Checks if the node exists alreay
-# 2. If id does, returns it's LOCATION IN MEMORY 
-#    as two exactly same instances of a class at different location are not same
-# 3. If it doesn't, adds it and calls itself again for checking memory location of node and return it.
-def add_node_if_required(G, locationNodeInstance):
-    for node in list(G.nodes):
+# =============================================================================
+# # 1. Checks if the node exists alreay
+# # 2. If id does, returns it's LOCATION IN MEMORY 
+# #    as two exactly same instances of a class at different location are not same
+# # 3. If it doesn't, adds it and calls itself again for checking memory location of node and return it.
+# =============================================================================
+def add_node(G, locationNodeInstance):
+    for node in list(G.nodes()):
         if (node.location == locationNodeInstance.location 
         and node.timestamp == locationNodeInstance.timestamp):
             return node   
     node = G.add_node(locationNodeInstance)
-    return add_node_if_required(G, locationNodeInstance)
+    return add_node(G, locationNodeInstance)
 
 
 """
-find_n_routes(Graph, source, destination) is a finction that finds 
+find_n_routes(Graph, source, destination,max_n_routes) is a finction that finds 
 max n routes between source and destination in a given Graph G
 """
 #Tracks the number of routes found uptill now
 
 n_routes = 0
-def find_n_routes(G=None, source=None, destination=None, max_n_routes=1):
+def find_n_routes(G=None, source=None, destination=None, max_n_routes=None):
+    """
+    set max_n_routes=False for all possible routes
+    """
     
+    
+    
+    
+    
+    if max_n_routes==None:
+        print('Set max_n_routes to False for all possible paths')
+        return()
+    if max_n_routes==False:
+        max_n_routes=1
     
     routes = []
     
@@ -110,7 +124,8 @@ def find_n_routes(G=None, source=None, destination=None, max_n_routes=1):
             if node.location == destination:
                 destination_node = node
                 neighbors.remove(destination_node)
-                n_routes+=1
+                if max_n_routes!=False:
+                    n_routes+=1
                 routes.append(path_till_current_node+[destination_node])
                 [find_next_node(path_till_current_node+[neighbor]) for neighbor in neighbors]
         

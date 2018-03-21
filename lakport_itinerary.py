@@ -23,14 +23,16 @@ git    : https://github.com/dumbPy
 import pandas as pd
 from datetime import datetime
 import networkx as nx
-import numpy as np
 import dumbpy_networkx_helper as dnh
 import matplotlib.pyplot as plt
-
+import configparser
 
 # =============================================================================
 # Variables Defined Below
 # =============================================================================
+config = configparser.ConfigParser()
+print(config.sections())
+
 
 maxDaysOnOneIsland = 3
 tourDuration = 15   #Not used in the code yet. for v2.0
@@ -39,7 +41,7 @@ Departure = datetime.strptime('11/03/2018', '%d/%m/%Y')
 Start = 'Kochi'
 End = 'Kochi'
 minHoursOnOneIsland = 3
-maxHoursPerShip = 30
+maxHoursPerShip = 24
 max_n_routes = 20
 
 
@@ -55,7 +57,7 @@ filler = 0
 df.fillna(filler, inplace = True)
 actualSchedule = df.set_index('Date', inplace=True)
 
-finalSchedule = [[Departure]+[Start]*len(df.columns)]
+finalSchedule = [[Departure]+[filler]*len(df.columns)]
 for i,date in enumerate(df.index):
     for j, ship in enumerate(df.columns):
         if df.loc[date, ship] != 0:
@@ -73,25 +75,25 @@ finalSchedule = pd.DataFrame(finalSchedule, columns = ['Date']+list(df.columns))
 
 #print([type(finalSchedule.loc[date, ship]) for date in finalSchedule.index for ship in finalSchedule.columns])
 
-
-G = nx.MultiDiGraph()
+# G initialized as Directional Graph. Nodes are set when setting Edges.
+G = nx.DiGraph()
 
 temp_time = 0
 temp_ship = 0
-def setEdges():
+def generateGraph():
     print('Calculating All Paths.. Please Wait')
-    for (i, edgeStartDate) in zip(finalSchedule.index[finalSchedule.Date> Departure], finalSchedule.Date[finalSchedule.Date> Departure]):
+    for (i, edgeStartDate) in zip(finalSchedule.index[finalSchedule.Date> Departure],
+                                  finalSchedule.Date[finalSchedule.Date> Departure]):
         #print(edgeStartDate)
         global temp_time
         temp_time = edgeStartDate
         cond1 = list(finalSchedule.Date > edgeStartDate)
-        cond2 = list((finalSchedule.Date-edgeStartDate).astype('timedelta64[D]') < maxDaysOnOneIsland)
+        cond2 = list((finalSchedule.Date-edgeStartDate).astype('timedelta64[h]') <= maxDaysOnOneIsland*24)
         cond3 = list((finalSchedule.Date-edgeStartDate).astype('timedelta64[D]') >= 0)
+        
         finalCond = [(a and b and c) for (a, b, c) in zip(cond1, cond2, cond3)]
         shortSchedule = finalSchedule[finalCond]
-        #print(cond1, cond2, cond3, finalCond)
-        #print(shortSchedule.shape)
-
+        
         for j, edgeStartShip in enumerate(shortSchedule.columns[1:]):
             edgeStart = finalSchedule.loc[i, edgeStartShip]
 
@@ -101,34 +103,49 @@ def setEdges():
                         
                         edgeEnd = shortSchedule.loc[iEnd, edgeEndShip]
                         #if edgeEnd == edgeStart: #for only cross edges
-                        if ((#Edge Indicating Island Stay, with min Hours on one island
-                            (edgeEnd == edgeStart
-                                  and pd.to_timedelta([edgeEndDate-edgeStartDate]).astype('timedelta64[h]')[0] > minHoursOnOneIsland) 
-                            #Edge Indicating Travel, with max hrs on a single ship. (need to get down at island)
-                            or (edgeEnd != 0 and edgeEndShip == edgeStartShip
-                                  and pd.to_timedelta([edgeEndDate-edgeStartDate]).astype('timedelta64[h]')[0] < maxHoursPerShip))
-                            #Neglect Edges between Ship Docking at Inland Port. Ship may Dock for a day or two at Inland Port.
-                            and  not((edgeEnd in inlandPorts) and (edgeStart in inlandPorts))
-                            ):
+                        
+# =============================================================================
+#                      Conditions Needed to be satisfied by an Edge
+# =============================================================================
+                            #Edge Indicating Island Stay, with min Hours on one island
+                        cond_a1 = (edgeEnd == edgeStart and 
+                                  pd.to_timedelta([edgeEndDate-edgeStartDate]).astype('timedelta64[h]')[0] > minHoursOnOneIsland)
+                        
+                        #Edge Indicating Travel, with max hrs on a single ship. (need to get down at island)
+                        cond_a2 = (edgeEnd != 0 and edgeEndShip == edgeStartShip
+                                  and pd.to_timedelta([edgeEndDate-edgeStartDate]).astype('timedelta64[h]')[0] < maxHoursPerShip)
+                            
+                        #Neglect Edges between Ship Docking at Inland Port. Ship may Dock for a day or two at Inland Port.
+                        cond_b = not((edgeEnd in inlandPorts) and (edgeStart in inlandPorts))
+                        
+                        if (( cond_a1 or cond_a2) and cond_b):
                             if edgeEnd != edgeStart: #edge representing travel
                                 edgeShip = edgeStartShip
                             else:#Edge representing stay
                                 edgeShip = None
-                            edgeStartNode = dnh.add_node_if_required(G, dnh.locationNode(edgeStart, edgeStartDate))
-                            edgeEndNode = dnh.add_node_if_required(G, dnh.locationNode(edgeEnd, edgeEndDate))
+# =============================================================================
+#                       If above Conditions are satisfied, Add nodes if required and add an edge
+#                       G.add_node() is not used below as it adds duplicate nodes when it already exists
+#                       Instead, dnh.add_node() is used to check the node's existance before adding
+# =============================================================================
+                            edgeStartNode = dnh.add_node(G, dnh.locationNode(edgeStart, edgeStartDate))
+                            edgeEndNode = dnh.add_node(G, dnh.locationNode(edgeEnd, edgeEndDate))
                             G.add_edge(edgeStartNode, edgeEndNode, ship = edgeShip)
-                            #print(edgeStart,' - ', edgeEnd, '                  timing- ', [edgeStartDate, edgeEndDate],' ship= ', edgeShip)
-
-setEdges()
+                           
+generateGraph()
+            #Destination = source if not explicitly passed as argument
 routes = dnh.find_n_routes(G=G, source='Kochi', max_n_routes= max_n_routes)
 
-def print_routes():
-    
+def print_routes():    
     for route in routes:
+      duration = pd.to_timedelta([route[-1].timestamp-route[0].timestamp]).astype('timedelta64[D]')
+      if duration <= tourDuration:  
         for i, node in enumerate(route[:-1]):
             print(node.location, node.timestamp)
-            print(G.get_edge_data(route[i], route[i+1])[0])
+            print(G.get_edge_data(route[i], route[i+1]), route[i+1].timestamp-route[i].timestamp)
         destination = route[-1]
         print(destination.location, destination.timestamp)
+        print('Tour Duration: ', duration)
         print()
+
 print_routes()
