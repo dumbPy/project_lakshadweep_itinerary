@@ -123,29 +123,31 @@ def generateGraph():
                                 edgeShip = edgeStartShip
                             else:#Edge representing stay
                                 edgeShip = None
-# =============================================================================
-#                       If above Conditions are satisfied, Add nodes if required and add an edge
-#                       G.add_node() is not used below as it adds duplicate nodes when it already exists
-#                       Instead, dnh.add_node() is used to check the node's existance before adding
-# =============================================================================
-                            edgeStartNode = dnh.add_node(G, dnh.locationNode(edgeStart, edgeStartDate))
-                            edgeEndNode = dnh.add_node(G, dnh.locationNode(edgeEnd, edgeEndDate))
+
+                            #Creating Nodes
+                            edgeStartNode = dnh.locationNode(edgeStart, edgeStartDate)
+                            edgeEndNode = dnh.locationNode(edgeEnd, edgeEndDate)
+                            #Adding Nodes and the connecting Edge to Graph
+                            G.add_node(edgeStartNode); G.add_node(edgeEndNode)
                             G.add_edge(edgeStartNode, edgeEndNode, ship = edgeShip)
                            
 generateGraph()
             #Destination = source if not explicitly passed as argument
-routes = dnh.find_n_routes(G=G, source='Kochi', max_n_routes= max_n_routes)
+routes = dnh.find_n_routes(G=G, source='Kochi', max_n_routes= max_n_routes, duration = tourDuration)
 
-def print_routes():    
-    for route in routes:
-      duration = pd.to_timedelta([route[-1].timestamp-route[0].timestamp]).astype('timedelta64[D]')
-      if duration <= tourDuration:  
-        for i, node in enumerate(route[:-1]):
-            print(node.location, node.timestamp)
-            print(G.get_edge_data(route[i], route[i+1]), route[i+1].timestamp-route[i].timestamp)
-        destination = route[-1]
-        print(destination.location, destination.timestamp)
-        print('Tour Duration: ', duration)
-        print()
+# =============================================================================
+# def print_routes():    
+#     for route in routes:
+#       duration = pd.to_timedelta([route[-1].timestamp-route[0].timestamp]).astype('timedelta64[D]')[0]
+#       if duration <= tourDuration:  
+#         for i, node in enumerate(route[:-1]):
+#             print(node.location, node.timestamp)
+#             print(G.get_edge_data(route[i], route[i+1]), route[i+1].timestamp-route[i].timestamp)
+#         destination = route[-1]
+#         print(destination.location, destination.timestamp)
+#         print('Tour Duration: ', route[-1].timestamp-route[0].timestamp)
+#         print()
+# 
+# print_routes()
+# =============================================================================
 
-print_routes()
