@@ -7,6 +7,7 @@ git    : https://github.com/dumbPy
 """
 import pandas as pd
 import networkx as nx
+import matplotlib.pyplot as plt
 #Class locationNode is crated to be used as Node with Port Name and Timestamp
 # a = locationNode('somePort', someTimestamp)) creates an instance of class locationNode
 # the attributes of a can be accessed as a.location and a.timestamp
@@ -27,10 +28,18 @@ class locationNode(object):
                 )
 
 class itinerary(object):
-    def __init__(self, list_of_nodes):
+    def __init__(self, list_of_nodes, list_of_edge_data=None):
         self.nodes = list_of_nodes
+        self.len_nodes = len(self.nodes)
         self.itin = nx.DiGraph()
-        self.itin.add_path(list_of_nodes)
+        for i, node in enumerate(self.nodes[:-1]):
+            if list_of_edge_data:
+                edgeTime = self.nodes[i+1].timestamp-self.nodes[i].timestamp
+                self.itin.add_edge(self.nodes[i], self.nodes[i+1], ship=str(list(list_of_edge_data[i].values())[0])+' '+str(edgeTime))
+                self.edgeData = list_of_edge_data
+            else:
+                self.itin.add_edge(self.nodes[i], self.nodes[i+1])
+                self.edgeData = [[]]*self.len_nodes-1
         self.duration = self.nodes[-1].timestamp-self.nodes[0].timestamp
         self.duration_D = pd.to_timedelta([self.duration]).astype('timedelta64[D]')[0]
         self.duration_h = pd.to_timedelta([self.duration]).astype('timedelta64[h]')
@@ -43,9 +52,25 @@ class itinerary(object):
         destination = self.nodes[-1]
         print(destination.location, destination.timestamp)
         print('Tour Duration: ', self.nodes[-1].timestamp-self.nodes[0].timestamp)
-        return()
+        return('')
     def draw(self):
-        nx.draw(self.itin)
+        
+        pos=nx.circular_layout(self.itin)
+        nx.draw_networkx(self.itin, pos, with_labels=True)
+        edge_labels = nx.get_edge_attributes(self.itin, 'ship')
+        nx.draw_networkx_edge_labels(self.itin, pos, labels = edge_labels)
+        plt.show()
+        
+# =============================================================================
+#         import numpy as np
+#         fig, ax = plt.subplot()
+#         ax.axis=False
+#         positions = zip(np.linspace(0, 1, self.len_nodes), [0]*self.len_nodes)
+#         pos = dict(zip(self.nodes, positions))
+#         nx.draw_networkx(self.itin, with_labels=True, ax=ax)
+#         nx.draw_networkx_edge_labels(self.itin, pos = pos, labels = self.edgeData, ax.axis=False)
+#         plt.show()
+# =============================================================================
 
 # =============================================================================
 # # 1. Checks if the node exists alreay
@@ -135,7 +160,9 @@ def find_n_routes(G=None, source=None, destination=None, max_n_routes=None, dura
                 neighbors.remove(destination_node)
                 if max_n_routes!=False:
                     n_routes+=1
-                itinInstance = itinerary(path_till_current_node+[destination_node])
+                nodeList = path_till_current_node+[destination_node]
+                edgeDataList = [G.get_edge_data(nodeList[i], nodeList[i+1]) for i, node in enumerate(nodeList[:-1])]
+                itinInstance = itinerary(nodeList, edgeDataList)
                 if duration:
                     if itinInstance.duration_D<duration:
                         routes.append(itinInstance)

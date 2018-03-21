@@ -34,8 +34,8 @@ config = configparser.ConfigParser()
 print(config.sections())
 
 
-maxDaysOnOneIsland = 3
-tourDuration = 15   #Not used in the code yet. for v2.0
+maxDaysOnOneIsland = 5
+tourDuration = 15
 
 Departure = datetime.strptime('11/03/2018', '%d/%m/%Y')
 Start = 'Kochi'
@@ -134,6 +134,10 @@ def generateGraph():
 generateGraph()
             #Destination = source if not explicitly passed as argument
 routes = dnh.find_n_routes(G=G, source='Kochi', max_n_routes= max_n_routes, duration = tourDuration)
+
+for route in routes:
+    #route.draw()
+    print(route)
 
 # =============================================================================
 # def print_routes():    
