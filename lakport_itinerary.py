@@ -30,9 +30,6 @@ import configparser
 # =============================================================================
 # Variables Defined Below
 # =============================================================================
-config = configparser.ConfigParser()
-print(config.sections())
-
 
 maxDaysOnOneIsland = 5
 tourDuration = 15
@@ -43,35 +40,51 @@ End = 'Kochi'
 minHoursOnOneIsland = 3
 maxHoursPerShip = 24
 max_n_routes = 20
+html = 'Lakport_page.html'
 
-
+# =============================================================================
+# Variables Defined Above
+# =============================================================================
 
 #Used to neglect inland stay as a part of itinerary
 inlandPorts = ['Kochi', 'Mangalore']
+filler = 0 # value to fill in place of NAN
 
-#url = os.path.expanduser("~/dropbox/projects/schedule_14_03_2018.html")  #use only if file is in some other directory
-url = 'schedule_14_03_2018.html'
-df = pd.read_html(url, header = 0)[0]
-df['Date'] = pd.Series([datetime.strptime(time, '%d/%m/%Y') for time in df.loc[:, 'Date']])
-filler = 0
-df.fillna(filler, inplace = True)
-actualSchedule = df.set_index('Date', inplace=True)
 
-finalSchedule = [[Departure]+[filler]*len(df.columns)]
-for i,date in enumerate(df.index):
-    for j, ship in enumerate(df.columns):
-        if df.loc[date, ship] != 0:
-            df.loc[date, ship] = '00:00'+df.loc[date, ship]
-    for j, ship in enumerate(df.columns):
-        if df.loc[date, ship] != 0:
-            for l in range(len(df.loc[date, ship].split(" - ")) - 1):
-                dateAndTime = str(date)[:10]+' '+df.loc[date, ship].split(' - ')[l+1][:5]
-                #print(dateAndTime)
-                newRow = [datetime.strptime(dateAndTime, '%Y-%m-%d %H:%M')]+[0]*len(df.columns)                
-                finalSchedule.append(newRow)
-                finalSchedule[-1][j+1] = df.loc[date, ship].split(' - ')[l][5:]
+def parse_schedule(html_file:str, filler:int=0) -> pd.DataFrame:
+    """function to parse ship schedule into `pandas.Dataframe`
+    Input
+    ------
+    html_file:  path to html file from scraped from lakport.nic.in
+    filler:     intiger to fill inplace of NAN values.
 
-finalSchedule = pd.DataFrame(finalSchedule, columns = ['Date']+list(df.columns))
+    Returns
+    --------
+    Schedule:   pandas.Dataframe of the schedule deduced from the `html_file`
+    """
+    df = pd.read_html(html_file, header = 0)[0]
+    df['Date'] = pd.Series([datetime.strptime(time, '%d/%m/%Y') for time in df.loc[:, 'Date']])
+    df.fillna(filler, inplace = True)
+    df.set_index('Date', inplace=True)
+    finalSchedule=[]
+    for i,date in enumerate(df.index):
+        for j, ship in enumerate(df.columns):
+            if df.loc[date, ship] != filler:
+                df.loc[date, ship] = '00:00'+df.loc[date, ship]
+        for j, ship in enumerate(df.columns):
+            if df.loc[date, ship] != filler:
+                for l in range(len(df.loc[date, ship].split(" - ")) - 1):
+                    dateAndTime = str(date)[:10]+' '+df.loc[date, ship].split(' - ')[l+1][:5]
+                    #print(dateAndTime)
+                    newRow = [datetime.strptime(dateAndTime, '%Y-%m-%d %H:%M')]+[filler]*len(df.columns)                
+                    finalSchedule.append(newRow)
+                    finalSchedule[-1][j+1] = df.loc[date, ship].split(' - ')[l][5:]
+
+    finalSchedule = pd.DataFrame(finalSchedule, columns = ['Date']+list(df.columns))
+    return finalSchedule
+
+finalSchedule = parse_schedule(html)
+
 
 #print([type(finalSchedule.loc[date, ship]) for date in finalSchedule.index for ship in finalSchedule.columns])
 
@@ -107,32 +120,32 @@ def generateGraph():
 # =============================================================================
 #                      Conditions Needed to be satisfied by an Edge
 # =============================================================================
-                            #Edge Indicating Island Stay, with min Hours on one island
+                        # Edge Indicating Island Stay, with min Hours on one island
                         cond_a1 = (edgeEnd == edgeStart and 
                                   pd.to_timedelta([edgeEndDate-edgeStartDate]).astype('timedelta64[h]')[0] > minHoursOnOneIsland)
                         
-                        #Edge Indicating Travel, with max hrs on a single ship. (need to get down at island)
+                        # Edge Indicating Travel, with max hrs on a single ship. (need to get down at island)
                         cond_a2 = (edgeEnd != 0 and edgeEndShip == edgeStartShip
                                   and pd.to_timedelta([edgeEndDate-edgeStartDate]).astype('timedelta64[h]')[0] < maxHoursPerShip)
                             
-                        #Neglect Edges between Ship Docking at Inland Port. Ship may Dock for a day or two at Inland Port.
+                        # Neglect Edges between Ship Docking at Inland Port. Ship may Dock for a day or two at Inland Port.
                         cond_b = not((edgeEnd in inlandPorts) and (edgeStart in inlandPorts))
                         
                         if (( cond_a1 or cond_a2) and cond_b):
                             if edgeEnd != edgeStart: #edge representing travel
                                 edgeShip = edgeStartShip
-                            else:#Edge representing stay
+                            else:# Edge representing stay
                                 edgeShip = None
 
-                            #Creating Nodes
+                            # Creating Nodes
                             edgeStartNode = dnh.locationNode(edgeStart, edgeStartDate)
                             edgeEndNode = dnh.locationNode(edgeEnd, edgeEndDate)
-                            #Adding Nodes and the connecting Edge to Graph
+                            # Adding Nodes and the connecting Edge to Graph
                             G.add_node(edgeStartNode); G.add_node(edgeEndNode)
                             G.add_edge(edgeStartNode, edgeEndNode, ship = edgeShip)
                            
 generateGraph()
-            #Destination = source if not explicitly passed as argument
+            # Destination = source if not explicitly passed as argument
 routes = dnh.find_n_routes(G=G, source='Kochi', max_n_routes= max_n_routes, duration = tourDuration)
 
 for route in routes:
