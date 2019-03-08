@@ -40,7 +40,7 @@ End = 'Kochi'
 minHoursOnOneIsland = 3
 maxHoursPerShip = 24
 max_n_routes = 20
-html = 'Lakport_page.html'
+html = 'Lakport_schedule.html'
 
 # =============================================================================
 # Variables Defined Above
