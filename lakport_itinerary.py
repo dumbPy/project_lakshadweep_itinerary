@@ -1,16 +1,13 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Wed Mar 14 00:32:17 2018
-@author: dumbPy
+@author: dumbPy <Sufiyan Adhikari>
 git    : https://github.com/dumbPy
 """
 """
 # =============================================================================
 # This script is used to parse feasible itinerary for Lakshdweep
-# As the Ship Schedule page is captcha and text-selection protected,
-# the schedule should be copied manually as follows.
+# Run `get_new_schedule.py` to download the schedule first
 # 
+# Or, you may download the html page manually as follows.
 # VISIT http://lakport.nic.in/ship_online_programme.aspx
 # SELECT 'All Passenger ships'. #here page will refresh is a fraction of sec.
 # Enter the captcha but don't submit/click view yet.
@@ -25,7 +22,6 @@ from datetime import datetime
 import networkx as nx
 import dumbpy_networkx_helper as dnh
 import matplotlib.pyplot as plt
-import configparser
 
 # =============================================================================
 # Variables Defined Below
