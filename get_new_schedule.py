@@ -16,7 +16,7 @@ from selenium.webdriver.firefox.options import Options
 import PIL
 from PIL import Image
 from pytesseract import image_to_string
-import pytesseract
+import pytesseract, glob
 import numpy as np, matplotlib.pyplot as plt, pandas as pd
 
 
@@ -53,12 +53,13 @@ def extract_capcha(browser):
     """
     img=browser.find_element_by_css_selector('img')
     import os, random
-    os.makedirs('captcha', exist_ok=True) # Serialize the captchas
-    captchas=[int(filename.split('.')[0].split('_')[1]) for filename 
-              in os.listdir('captcha') if 'cap' in filename]
-    # New name = old name + 1
-    if len(captchas)==0: captchas=[-1]
-    cap_name = 'captcha/cap_'+ str(max(captchas)+1) +'.png'
+    os.makedirs('captcha', exist_ok=True)
+    captchas = (glob.glob('captcha/cap_*.png')) # eg. captcha/cap_1.png
+    # extracting captcha number from numbers from captcha/cap_*.png
+    captchas = [int(os.path.split(path)[1].split('.')[0].split('_')[1]) for path in captchas]
+    # New captcha_name = captcha/cap_<n+1>.png
+    if len(captchas) == 0: captchas = [-1]
+    cap_name = 'captcha/cap_%i.png' %(max(captchas)+1)
     img.screenshot(cap_name)
     return Image.open(cap_name)
 
