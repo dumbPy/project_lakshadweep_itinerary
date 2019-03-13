@@ -136,4 +136,6 @@ with open('../Lakport_schedule.html', 'w') as f:
 
 
 pd.read_html('../Lakport_schedule.html', header=0)[0]
+print(pd)
+print('\n\nDone!!!!')
 
