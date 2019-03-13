@@ -65,7 +65,8 @@ def extract_capcha(browser):
 def display_captcha(browser):
     plt.imshow(extract_capcha(browser))
     print("OCR Prediction: ", image_to_string(extract_capcha(browser)))
-    plt.show(block=False)
+    plt.draw()
+    plt.pause(.01)
 
 
 # In[185]:
@@ -114,6 +115,8 @@ def is_captcha_valid(browser):
 
 
 # Try new captchas untill correct prediction ;)
+plt.ion()
+plt.show()
 for i in range(100):
     if is_captcha_valid(browser): break #break out of for loop
     solve_captcha_again(browser, display=True)
@@ -135,7 +138,7 @@ with open('../Lakport_schedule.html', 'w') as f:
 # In[181]:
 
 
-pd.read_html('../Lakport_schedule.html', header=0)[0]
-print(pd)
+df = pd.read_html('../Lakport_schedule.html', header=0)[0]
+print(df)
 print('\n\nDone!!!!')
 
