@@ -1,2 +1,7 @@
 __pycache__
 misc
+geckodriver.log
+captcha
+captcha/*
+settings.json
+

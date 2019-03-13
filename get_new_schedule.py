@@ -65,7 +65,7 @@ def extract_capcha(browser):
 def display_captcha(browser):
     plt.imshow(extract_capcha(browser))
     print("OCR Prediction: ", image_to_string(extract_capcha(browser)))
-    plt.show()
+    plt.show(block=False)
 
 
 # In[185]:
@@ -126,7 +126,7 @@ for i in range(100):
 # In[177]:
 
 
-with open('../IE504 Assignment/Lakport_schedule.html', 'w') as f:
+with open('../Lakport_schedule.html', 'w') as f:
     f.write(browser.page_source)
 
 
@@ -135,5 +135,5 @@ with open('../IE504 Assignment/Lakport_schedule.html', 'w') as f:
 # In[181]:
 
 
-pd.read_html('../IE504 Assignment/Lakport_schedule.html', header=0)[0]
+pd.read_html('../Lakport_schedule.html', header=0)[0]
 
