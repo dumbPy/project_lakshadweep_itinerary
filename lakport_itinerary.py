@@ -20,34 +20,33 @@ git    : https://github.com/dumbPy
 import pandas as pd
 from datetime import datetime
 import networkx as nx
-import dumbpy_networkx_helper as dnh
-import matplotlib.pyplot as plt
+import utils
+import matplotlib.pyplot as plt, numpy as np
+
+#Used to neglect inland stay as a part of itinerary
+inlandPorts = ['Kochi', 'Mangalore', 'Beypore']
 
 # =============================================================================
 # Variables Defined Below
 # =============================================================================
-
-maxDaysOnOneIsland = 5
-tourDuration = 15
-
-Departure = datetime.strptime('11/03/2018', '%d/%m/%Y')
-Start = 'Kochi'
-End = 'Kochi'
-minHoursOnOneIsland = 3
-maxHoursPerShip = 24
-max_n_routes = 20
-html = 'Lakport_schedule.html'
-
+params = {
+'maxDaysOnOneIsland' : 5,
+'duration' : 15, # Max duration of tour
+'Departure' : datetime.strptime('11/03/2018', '%d/%m/%Y'),
+'source' : inlandPorts,
+'destination' : inlandPorts,
+'minHoursOnOneIsland' : 3,
+'maxHoursPerShip' : 24,
+'max_n_routes' : np.infty,
+'html_file' : 'Lakport_schedule.html',
+'filler' : 0 # Used to fill NaN values
+}
 # =============================================================================
 # Variables Defined Above
 # =============================================================================
 
-#Used to neglect inland stay as a part of itinerary
-inlandPorts = ['Kochi', 'Mangalore']
-filler = 0 # value to fill in place of NAN
 
-
-def parse_schedule(html_file:str, filler:int=0) -> pd.DataFrame:
+def parse_schedule(html_file:str, filler:int=0, **kwargs) -> pd.DataFrame:
     """function to parse ship schedule into `pandas.Dataframe`
     Input
     ------
@@ -79,23 +78,26 @@ def parse_schedule(html_file:str, filler:int=0) -> pd.DataFrame:
     finalSchedule = pd.DataFrame(finalSchedule, columns = ['Date']+list(df.columns))
     return finalSchedule
 
-finalSchedule = parse_schedule(html)
+
 
 
 #print([type(finalSchedule.loc[date, ship]) for date in finalSchedule.index for ship in finalSchedule.columns])
 
-# G initialized as Directional Graph. Nodes are set when setting Edges.
-G = nx.DiGraph()
 
-temp_time = 0
-temp_ship = 0
-def generateGraph():
+def generateGraph(cleaned_schedule, Departure, maxDaysOnOneIsland=5, 
+                minHoursOnOneIsland=3, maxHoursPerShip=24, filler=0, **kwargs):
+    finalSchedule = cleaned_schedule
+    # G initialized as Directional Graph. Nodes are set when setting Edges.
+    G = nx.DiGraph()
+    # temp_time = 0
+    # temp_ship = 0
+
     print('Calculating All Paths.. Please Wait')
     for (i, edgeStartDate) in zip(finalSchedule.index[finalSchedule.Date> Departure],
                                   finalSchedule.Date[finalSchedule.Date> Departure]):
         #print(edgeStartDate)
-        global temp_time
-        temp_time = edgeStartDate
+        # global temp_time
+        # temp_time = edgeStartDate
         cond1 = list(finalSchedule.Date > edgeStartDate)
         cond2 = list((finalSchedule.Date-edgeStartDate).astype('timedelta64[h]') <= maxDaysOnOneIsland*24)
         cond3 = list((finalSchedule.Date-edgeStartDate).astype('timedelta64[D]') >= 0)
@@ -134,33 +136,22 @@ def generateGraph():
                                 edgeShip = None
 
                             # Creating Nodes
-                            edgeStartNode = dnh.locationNode(edgeStart, edgeStartDate)
-                            edgeEndNode = dnh.locationNode(edgeEnd, edgeEndDate)
+                            edgeStartNode = utils.locationNode(edgeStart, edgeStartDate)
+                            edgeEndNode = utils.locationNode(edgeEnd, edgeEndDate)
                             # Adding Nodes and the connecting Edge to Graph
                             G.add_node(edgeStartNode); G.add_node(edgeEndNode)
                             G.add_edge(edgeStartNode, edgeEndNode, ship = edgeShip)
-                           
-generateGraph()
-            # Destination = source if not explicitly passed as argument
-routes = dnh.find_n_routes(G=G, source='Kochi', max_n_routes= max_n_routes, duration = tourDuration)
+    return G
 
-for route in routes:
-    #route.draw()
-    print(route)
+def get_all_routes(params):
+    cleanedSchedule = parse_schedule(**params)
+    G = generateGraph(cleanedSchedule, **params)
+    routes = utils.find_n_routes(G=G, source='Kochi', **params)
+    return routes
 
-# =============================================================================
-# def print_routes():    
-#     for route in routes:
-#       duration = pd.to_timedelta([route[-1].timestamp-route[0].timestamp]).astype('timedelta64[D]')[0]
-#       if duration <= tourDuration:  
-#         for i, node in enumerate(route[:-1]):
-#             print(node.location, node.timestamp)
-#             print(G.get_edge_data(route[i], route[i+1]), route[i+1].timestamp-route[i].timestamp)
-#         destination = route[-1]
-#         print(destination.location, destination.timestamp)
-#         print('Tour Duration: ', route[-1].timestamp-route[0].timestamp)
-#         print()
-# 
-# print_routes()
-# =============================================================================
-
+if __name__=='__main__':
+    cleanedSchedule = parse_schedule(**params)
+    G = generateGraph(cleanedSchedule, **params)
+    routes = utils.find_n_routes(G=G, source='Kochi', **params)
+    for route in routes:
+        print(route)
