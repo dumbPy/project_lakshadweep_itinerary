@@ -4,4 +4,4 @@ geckodriver.log
 captcha
 captcha/*
 settings.json
-
+.ipynb*

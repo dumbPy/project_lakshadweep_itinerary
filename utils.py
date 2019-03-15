@@ -64,7 +64,6 @@ class itinerary(object):
             if m is None:
                 m = folium.Map([10.99,73.66], zoom_start=7)
                 # m.add_child(folium.LatLngPopup())
-            print(len(self.nodes[:-1]))
             t_format = '%Y-%m-%d %I:%M %p'
             for i,node in enumerate(self.nodes[:-1]):
                 if i%2==0: # Even Edges starting from 0th edge represent travel
