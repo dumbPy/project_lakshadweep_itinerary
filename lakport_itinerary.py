@@ -32,7 +32,7 @@ inlandPorts = ['Kochi', 'Mangalore', 'Beypore']
 params = {
 'maxDaysOnOneIsland' : 5,
 'duration' : 15, # Max duration of tour
-'Departure' : datetime.strptime('11/03/2018', '%d/%m/%Y'),
+'Departure' : datetime.strptime('11/03/2018', '%d/%m/%Y'), # Or use datetime.now()
 'source' : inlandPorts,
 'destination' : inlandPorts,
 'minHoursOnOneIsland' : 3,
@@ -146,12 +146,12 @@ def generateGraph(cleaned_schedule, Departure, maxDaysOnOneIsland=5,
 def get_all_routes(params):
     cleanedSchedule = parse_schedule(**params)
     G = generateGraph(cleanedSchedule, **params)
-    routes = utils.find_n_routes(G=G, source='Kochi', **params)
+    routes = utils.find_n_routes(G=G, **params)
     return routes
 
 if __name__=='__main__':
     cleanedSchedule = parse_schedule(**params)
     G = generateGraph(cleanedSchedule, **params)
-    routes = utils.find_n_routes(G=G, source='Kochi', **params)
+    routes = utils.find_n_routes(G=G, **params)
     for route in routes:
         print(route)
