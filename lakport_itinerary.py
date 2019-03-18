@@ -32,7 +32,7 @@ inlandPorts = ['Kochi', 'Mangalore', 'Beypore']
 params = {
 'maxDaysOnOneIsland' : 5,
 'duration' : 15, # Max duration of tour
-'Departure' : datetime.strptime('11/03/2018', '%d/%m/%Y'),
+'Departure' : datetime.strptime('11/03/2018', '%d/%m/%Y'), # Or use datetime.now()
 'source' : inlandPorts,
 'destination' : inlandPorts,
 'minHoursOnOneIsland' : 3,
