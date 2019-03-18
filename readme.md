@@ -12,9 +12,9 @@ Hence the need to come up with a suitable Itinerary planning method was felt by 
 <strong>Mainland(India) &lt;–&gt; Lakshadweep</strong> Sea Transport Network and Itinerary planning from this Graph.</p>
 <h2 id="ship-schedule">Ship Schedule</h2>
 <p>Each Month, the Lakshadweep Administration publishes a new Schedule for these ships. An example of this schedule can be found below:<br>
-<img src="https://lh3.googleusercontent.com/2z8Vtmrg6Of5LPXO3wk0phR5nMl1Gt5PdncvPvY62u1VOy0Dp76HLTU9poiXZH91FP6-7Z9mFh0=s1440" alt="Sample Ship Schedule"></p>
+<img src="Images/original_schedule.png" alt="Sample Ship Schedule"></p>
 <p>Manual Itinerary Planning based on above schedule is hard and will surely lead to missing a lot of possible travel options that are hard to spot in the above jumbled schedule. A small example can be found below:</p>
-<p><img src="https://lh3.googleusercontent.com/Q2C6RoqyVIqVJ7RT1xCeNcH_rLpOfrBGkMkqrKD7of32HLaqmGbOXc86yWbJYhgDqofIWaJ2Obg=s1440" alt="Manual itinerary"></p>
+<p><img src="Images/Manual Itinerary Sample.jpg" alt="Manual itinerary"></p>
 <h2 id="steps-before-running-the-code">Steps before running the code</h2>
 <h3 id="extracting-the-above-ship-schedule-manually.">Extracting the above Ship Schedule manually.</h3>
 <p>The <a href="http://lakport.nic.in">Ship Schedule</a> is captcha and text selection protected and hence the need to get the latest schedule manually as shown below.</p>
@@ -29,7 +29,7 @@ Hence the need to come up with a suitable Itinerary planning method was felt by 
 <p>The Code will extract the required Schedule Table from the above HTML file, but remember to change this HTML file’s name properly in the code.</p>
 <h2 id="methodology">Methodology</h2>
 <h3 id="laymans">Layman’s:</h3>
-<p><img src="https://lh3.googleusercontent.com/1Ig9I-sskVi40W3-6i3k5AtvCFYylUw2u_UfxssrdMQG_btFmJJ0upaDGgYnKFEX49vfq60y2rU=s509" alt="enter image description here"><br>
+<p><img src="Images/sample_itinerary.png" alt="enter image description here"><br>
 Above Network shows Travel and Stay as Edges with related Data. Note: <em>‘ship’:None</em> represents Stay at the island representing same Island by two different nodes at two different timing.</p>
 <h3 id="technical">Technical</h3>
 <p>(You may neglect this part)<br>

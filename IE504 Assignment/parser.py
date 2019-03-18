@@ -30,10 +30,10 @@ def parse_schedule(html_file:str, filler:int=0) -> pd.DataFrame:
                     newRow = [datetime.strptime(dateAndTime, '%Y-%m-%d %H:%M')]+[filler]*len(df.columns)                
                     finalSchedule.append(newRow)
                     finalSchedule[-1][j+1] = df.loc[date, ship].split(' - ')[l][5:]
-
+    finalSchedule.sort(key = lambda row:row[0]) # Sort by datetime
     finalSchedule = pd.DataFrame(finalSchedule, columns = ['Date']+list(df.columns))
     return finalSchedule
 
 if __name__ == '__main__':
-    df=parse_schedule("Lakport_page.html", filler=0)
+    df=parse_schedule("Lakport_schedule.html", filler=0)
     print(df.head(n=10))
