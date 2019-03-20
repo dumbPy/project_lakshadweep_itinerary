@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Sun Mar 18 00:39:22 2018
 @author: dumbPy
 git    : https://github.com/dumbPy
 """
@@ -10,45 +8,43 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import folium
 import numpy as np
-#Class locationNode is crated to be used as Node with Port Name and Timestamp
-# a = locationNode('somePort', someTimestamp)) creates an instance of class locationNode
-# the attributes of a can be accessed as a.location and a.timestamp
-#Edge between these locationNode instances can be created as G.add_edge(a, b) for a, b as two instances
+from datetime import datetime
     
-class locationNode(object):
-    def __init__(self, location, timestamp):
+class locationNode:
+    def __init__(self, location, timestamp, ship=None):
         self.location = location
         self.timestamp = timestamp
+        self.ship = ship
         self.coords = coords[location]
     def __str__(self):
         return ('%s %s'%(str(self.location), str(self.timestamp)))
     def __repr__(self): return self.__str__()
     def __hash__(self):
-        return (hash((self.location, self.timestamp)))
+        return (hash((self.location, self.timestamp, self.ship)))
     def __eq__(self, other):
-        return (self.__class__ == other.__class__ and
-                self.location == other.location and
-                self.timestamp == other.timestamp
-                )
+        return (hash(self) == hash(other))
+    
+    @classmethod
+    def fromRow(cls, row:pd.Series, filler=0, **kwargs):
+        timestamp = row['Date']
+        for col in row.keys()[1:]:
+            if row[col]!= filler:
+                location = row[col]
+                ship = col
+        return cls(location, timestamp, ship)
 
-class itinerary(object):
-    def __init__(self, list_of_nodes, list_of_edge_data=None):
+
+class Itinerary:
+    def __init__(self, list_of_nodes, list_of_edge_data):
         self.nodes = list_of_nodes
         self.len_nodes = len(self.nodes)
         self.itin = nx.DiGraph()
+        
         for i, node in enumerate(self.nodes[:-1]):
-            if list_of_edge_data:
-                edgeTime = self.nodes[i+1].timestamp-self.nodes[i].timestamp
-                self.itin.add_edge(self.nodes[i], self.nodes[i+1], ship=str(list(list_of_edge_data[i].values())[0])+' '+str(edgeTime))
-                self.edgeData = list_of_edge_data
-            else:
-                self.itin.add_edge(self.nodes[i], self.nodes[i+1])
-                self.edgeData = [[]]*self.len_nodes-1
-        self.duration = self.nodes[-1].timestamp-self.nodes[0].timestamp
-        self.duration_D = pd.to_timedelta([self.duration]).astype('timedelta64[D]')[0]
-        self.duration_h = pd.to_timedelta([self.duration]).astype('timedelta64[h]')
-    # def nodes(self):
-    #     return (self.nodes)
+            edgeTime = self.nodes[i+1].timestamp-self.nodes[i].timestamp
+            self.itin.add_edge(self.nodes[i], self.nodes[i+1], ship=str(list(list_of_edge_data[i].values())[0])+' '+str(edgeTime))
+            self.edgeData = list_of_edge_data
+
     def __str__(self):
         for i, node in enumerate(self.nodes[:-1]):
             print(node.location, node.timestamp)
@@ -57,6 +53,9 @@ class itinerary(object):
         print(destination.location, destination.timestamp)
         print('Tour Duration: ', self.nodes[-1].timestamp-self.nodes[0].timestamp)
         return('')
+    def __eq__(self, other):    return hash(self)==hash(other)
+    def __hash__(self):         return hash(tuple(self.nodes))
+
     def draw(self, m:folium.Map=None, print_=False):
         if print_ : print(self)
         try:
@@ -102,96 +101,63 @@ class itinerary(object):
         center[1]+=0.1*np.sign(end[1]-start[1])
         return [start, center, end]
 
+class RouteFinder:
+    def __init__(self,G, source, destination, max_n_routes=np.infty,duration=None,**kwargs):
+        self.G,self.source,self.destination,self.max_n_routes,self.duration = \
+                G,source,destination,max_n_routes,duration
+        start_nodes = [node for node in G.nodes if node.location in source]
+        self.routes = []
+        self.n_routes = 0 # counter for number of routes
+        for node in start_nodes: self.walk([node])
 
+    def addItinerary(self, nodes):
+        edge_data = [self.G.edges[nodes[i], nodes[i+1]] for i in range(len(nodes)-1)]
+        self.routes.append(Itinerary(nodes, edge_data))
+    
+    def walk(self, priv_path:list):
+        """ Walk the next possible nodes.
+        Return the list of previous walked nodes leading from source to destination
+        """
+        # End conditions for recursive loop
+        current_node = priv_path[-1]
+        if current_node.location in self.destination and len(priv_path)>1:
+            self.addItinerary(priv_path)
+            self.n_routes+=1
+            return
+        if self.n_routes >= self.max_n_routes:
+            return
 
-#Tracks the number of routes found uptill now
-n_routes = 0
+        if len(priv_path)>1:
+            # Get metadata of last edge type
+            last_edge = self.EdgeType(priv_path[-2], priv_path[-1])
+        else: # If it's start of itinerary, next edge would be travel edge
+              # So, make last edge as stay
+              last_edge = 'stay'
+        if last_edge == 'stay': # next edge will be travel i.e., ship not None
+            next_nodes = [node for node in self.G.neighbors(current_node) 
+                            if self.G.edges[current_node, node]['ship'] is not None]
+        else: # Next edge will be stay, i.e., ship = None
+            next_nodes = [node for node in self.G.neighbors(current_node)
+                            if self.G.edges[current_node, node]['ship'] is None]
+        
+        for node in next_nodes:
+            self.walk(priv_path+[node])
 
-def find_n_routes(G, source:'list of inland ports'=None, destination:'list of inland ports'=None, 
+    def EdgeType(self, node1,node2):
+        try:
+            ship =  self.G.edges[node1, node2]['ship']
+            if ship is None: return 'stay'
+            else: return 'travel'
+        except: raise ValueError(f'{node1} and {node2} have no edge between them')
+
+    @staticmethod
+    def find_routes(G, source:'list of inland ports'=None, destination:'list of inland ports'=None, 
                     max_n_routes=np.infty, duration=None, **kwargs):
-    """
-    find_n_routes(Graph, source, destination,max_n_routes) is a function that finds 
-    max n routes between source and destination in a given Graph G
-    """ 
-    # n_routes = 0
-    inlandPorts = ['Kochi', 'Mangalore', 'Beypore']
-    routes = []
-    if source is None: source = inlandPorts
-    if destination is None : destination = inlandPorts
-        
-    def find_next_node(path_till_current_node):
-        global n_routes
-        if n_routes >= max_n_routes:    #To make sure loop ends when we find n routes
-            return ([])
-        # path_till_current_node is a list of all nodes from start till current_node
-        current_node= path_till_current_node[-1]        
-        neighbors = list(G.neighbors(current_node))
-        
-        # Condition 1, no neighbors
-        if len(neighbors)==0 or n_routes>= max_n_routes:
-            return()
-        
-        def filter_neighbors(neighbors):
-            
-            cleaned_neighbors = neighbors[:]
-            #Cleaning neighbors of all nodes that shouldn't be there.
-            if len(path_till_current_node)>= 2:
-                node1 = path_till_current_node[-2]
-                node2 = path_till_current_node[-1]
-                if node1.location==node2.location:
-                    last_edge_type = 'stay'
-                else:
-                    last_edge_type = 'travel'
-            else:
-                last_edge_type = None
-            
-            for node in neighbors:
-                """Removing All unwanted neighboring nodes
-                """
-                if node in path_till_current_node:
-                    cleaned_neighbors.remove(node)
-                
-                if node.location==current_node.location and last_edge_type=='stay':
-                    cleaned_neighbors.remove(node)
+        finder = RouteFinder(G=G, source=source, destination=destination, 
+                    max_n_routes=max_n_routes, duration=duration, **kwargs)
+        return finder.routes
 
-                if node.location != current_node.location and last_edge_type == 'travel':
-                    cleaned_neighbors.remove(node)
-                    
-            return(cleaned_neighbors, last_edge_type)
-            
-        neighbors, last_edge_type = filter_neighbors(neighbors)
-        
-        # Condition 2, return chain ending with destination and other chains
-        for node in neighbors:
-            if node.location in destination:
-                destination_node = node
-                neighbors.remove(destination_node)
-                if max_n_routes!=False:
-                    n_routes+=1
-                nodeList = path_till_current_node+[destination_node]
-                edgeDataList = [G.get_edge_data(nodeList[i], nodeList[i+1]) for i, node in enumerate(nodeList[:-1])]
-                itinInstance = itinerary(nodeList, edgeDataList)
-                if duration:
-                    if itinInstance.duration_D<duration:
-                        routes.append(itinInstance)
-                else:
-                    routes.append(itinInstance)
-                [find_next_node(path_till_current_node+[neighbor]) for neighbor in neighbors]
-        
-        #No neighbor is destination, call recursively on all next nodes
-        [find_next_node(path_till_current_node+[neighbor]) for neighbor in neighbors]
-
-    start_nodes = []
-    for node in G.nodes():
-        if node.location in source:
-            start_nodes.append(node)
-            #print(node.location, node.timestamp)
-    [find_next_node([start_node]) for start_node in start_nodes]
-    global n_routes
-    n_routes = 0
-    return(routes)
-        
-        
+   
 coords = {
     'Kadmat':[11.2212,72.7754],
     'Agatti':[10.8679,72.1954],
@@ -208,14 +174,3 @@ coords = {
     'Kochi':[9.9692,76.2592],
     'Mangalore':[12.8514,74.8230]
 }
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        

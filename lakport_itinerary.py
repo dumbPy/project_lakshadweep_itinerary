@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 @author: dumbPy <Sufiyan Adhikari>
 git    : https://github.com/dumbPy
@@ -6,21 +7,12 @@ git    : https://github.com/dumbPy
 # =============================================================================
 # This script is used to parse feasible itinerary for Lakshdweep
 # Run `get_new_schedule.py` to download the schedule first
-# 
-# Or, you may download the html page manually as follows.
-# VISIT http://lakport.nic.in/ship_online_programme.aspx
-# SELECT 'All Passenger ships'. #here page will refresh is a fraction of sec.
-# Enter the captcha but don't submit/click view yet.
-# Right_click>Inspect>Network_Tab
-# Now submit/click VIEW. #Some files will appear in Network Tab.
-# Click 'ship_online_programme.aspx' and in that click Response sub-Tab.
-# Copy the response into a txt file and import it below.
 # =============================================================================
 """
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import networkx as nx
-import utils
+import utils, itertools
 import matplotlib.pyplot as plt, numpy as np
 
 #Used to neglect inland stay as a part of itinerary
@@ -79,79 +71,54 @@ def parse_schedule(html_file:str, filler:int=0, **kwargs) -> pd.DataFrame:
     return finalSchedule
 
 
-
-
-#print([type(finalSchedule.loc[date, ship]) for date in finalSchedule.index for ship in finalSchedule.columns])
+def check_conditions(   node1:utils.locationNode, node2:utils.locationNode, Departure, 
+                        maxHoursPerShip, maxDaysOnOneIsland, minHoursOnOneIsland, other_G=None,**kwargs) -> ('bool','ship'):
+    """Given 2 nodes and some parameters, check if the edge between them is possible
+    """
+ 
+    if  node1.timestamp > Departure and\
+        node1.timestamp < node2.timestamp:
+        
+        # Stay Edge
+        if      node1.location == node2.location and\
+                node2.timestamp-node1.timestamp <= timedelta(days=maxDaysOnOneIsland) and\
+                node2.timestamp-node1.timestamp >= timedelta(hours=minHoursOnOneIsland):
+                if node1.location in inlandPorts: #Skip stay at mainland India
+                        return False, None
+                else:   return True, None # Else, consider stay edges at islands
+        # Travel Edge
+        elif    node1.ship == node2.ship and\
+                (node2.timestamp-node1.timestamp) <= timedelta(hours=maxHoursPerShip):
+                return True, node1.ship
+        else:   return False, None
+    else: return False, None
 
 
 def generateGraph(cleaned_schedule, Departure, maxDaysOnOneIsland=5, 
                 minHoursOnOneIsland=3, maxHoursPerShip=24, filler=0, **kwargs):
-    finalSchedule = cleaned_schedule
-    # G initialized as Directional Graph. Nodes are set when setting Edges.
     G = nx.DiGraph()
-    # temp_time = 0
-    # temp_ship = 0
-
-    print('Calculating All Paths.. Please Wait')
-    for (i, edgeStartDate) in zip(finalSchedule.index[finalSchedule.Date> Departure],
-                                  finalSchedule.Date[finalSchedule.Date> Departure]):
-        #print(edgeStartDate)
-        # global temp_time
-        # temp_time = edgeStartDate
-        cond1 = list(finalSchedule.Date > edgeStartDate)
-        cond2 = list((finalSchedule.Date-edgeStartDate).astype('timedelta64[h]') <= maxDaysOnOneIsland*24)
-        cond3 = list((finalSchedule.Date-edgeStartDate).astype('timedelta64[D]') >= 0)
-        
-        finalCond = [(a and b and c) for (a, b, c) in zip(cond1, cond2, cond3)]
-        shortSchedule = finalSchedule[finalCond]
-        
-        for j, edgeStartShip in enumerate(shortSchedule.columns[1:]):
-            edgeStart = finalSchedule.loc[i, edgeStartShip]
-
-            if edgeStart != filler:
-                for iEnd, edgeEndDate in zip(shortSchedule.index, shortSchedule.Date):
-                    for jEnd, edgeEndShip in zip(shortSchedule.index, shortSchedule.columns[1:]):
-                        
-                        edgeEnd = shortSchedule.loc[iEnd, edgeEndShip]
-                        #if edgeEnd == edgeStart: #for only cross edges
-                        
-# =============================================================================
-#                      Conditions Needed to be satisfied by an Edge
-# =============================================================================
-                        # Edge Indicating Island Stay, with min Hours on one island
-                        cond_a1 = (edgeEnd == edgeStart and 
-                                  pd.to_timedelta([edgeEndDate-edgeStartDate]).astype('timedelta64[h]')[0] > minHoursOnOneIsland)
-                        
-                        # Edge Indicating Travel, with max hrs on a single ship. (need to get down at island)
-                        cond_a2 = (edgeEnd != 0 and edgeEndShip == edgeStartShip
-                                  and pd.to_timedelta([edgeEndDate-edgeStartDate]).astype('timedelta64[h]')[0] < maxHoursPerShip)
-                            
-                        # Neglect Edges between Ship Docking at Inland Port. Ship may Dock for a day or two at Inland Port.
-                        cond_b = not((edgeEnd in inlandPorts) and (edgeStart in inlandPorts))
-                        
-                        if (( cond_a1 or cond_a2) and cond_b):
-                            if edgeEnd != edgeStart: #edge representing travel
-                                edgeShip = edgeStartShip
-                            else:# Edge representing stay
-                                edgeShip = None
-
-                            # Creating Nodes
-                            edgeStartNode = utils.locationNode(edgeStart, edgeStartDate)
-                            edgeEndNode = utils.locationNode(edgeEnd, edgeEndDate)
-                            # Adding Nodes and the connecting Edge to Graph
-                            G.add_node(edgeStartNode); G.add_node(edgeEndNode)
-                            G.add_edge(edgeStartNode, edgeEndNode, ship = edgeShip)
+    # Add all nodes to graph
+    G.add_nodes_from([utils.locationNode.fromRow(row) for _,row in cleaned_schedule.iterrows()])
+    print('Nodes Added: ', str(len(G.nodes)))
+    for node1, node2 in itertools.permutations(list(G.nodes()), 2):
+        cond, ship = check_conditions(node1, node2, 
+                            Departure=Departure,
+                            minHoursOnOneIsland=minHoursOnOneIsland,
+                            maxHoursPerShip=maxHoursPerShip,
+                            maxDaysOnOneIsland=maxDaysOnOneIsland)
+        if cond: G.add_edge(node1, node2, ship = ship)
     return G
 
-def get_all_routes(params):
+def get_all_routes(**params):
     cleanedSchedule = parse_schedule(**params)
     G = generateGraph(cleanedSchedule, **params)
-    routes = utils.find_n_routes(G=G, **params)
+    routes = utils.RouteFinder.find_routes(G, **params)
     return routes
 
 if __name__=='__main__':
     cleanedSchedule = parse_schedule(**params)
     G = generateGraph(cleanedSchedule, **params)
-    routes = utils.find_n_routes(G=G, **params)
+    routes = utils.RouteFinder.find_routes(G, **params)
     for route in routes:
         print(route)
+    print("Total Routes: %i"%len(routes))
