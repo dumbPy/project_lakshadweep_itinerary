@@ -155,6 +155,7 @@ class RouteFinder:
                     max_n_routes=np.infty, duration=None, **kwargs):
         finder = RouteFinder(G=G, source=source, destination=destination, 
                     max_n_routes=max_n_routes, duration=duration, **kwargs)
+        print('Total Routes Found: %i'%len(finder.routes))
         return finder.routes
 
    

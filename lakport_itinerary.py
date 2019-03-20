@@ -99,7 +99,7 @@ def generateGraph(cleaned_schedule, Departure, maxDaysOnOneIsland=5,
     G = nx.DiGraph()
     # Add all nodes to graph
     G.add_nodes_from([utils.locationNode.fromRow(row) for _,row in cleaned_schedule.iterrows()])
-    print('Nodes Added: ', str(len(G.nodes)))
+    print('Total Nodes Added: ', str(len(G.nodes)))
     for node1, node2 in itertools.permutations(list(G.nodes()), 2):
         cond, ship = check_conditions(node1, node2, 
                             Departure=Departure,
@@ -107,6 +107,7 @@ def generateGraph(cleaned_schedule, Departure, maxDaysOnOneIsland=5,
                             maxHoursPerShip=maxHoursPerShip,
                             maxDaysOnOneIsland=maxDaysOnOneIsland)
         if cond: G.add_edge(node1, node2, ship = ship)
+    print('Total Edges Added: ', str(len(G.edges)))
     return G
 
 def get_all_routes(**params):
